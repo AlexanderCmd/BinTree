@@ -8,41 +8,24 @@ template <typename V, typename K>
 class BitTree {
 private:
 	class Node {
-	private:
+	public:
 		V value;
 		K key;
 		std::unique_ptr <Node> right;
 		std::unique_ptr <Node> left;
-	public:
 		Node(const V value, const K key, std::unique_ptr <Node> right, std::unique_ptr <Node> left) {
-			this->value = velue;
+			this->value = value;
 			this->key = key;
 			this->right = std::move(right);
 			this->left = std::move(left);
 		};
-		
-		V get_value() {
-			return value;
-		}
-
-		K get_key() {
-			return key;
-		}
-
-		Node* get_left() {
-			return left.get();
-		}
-
-		Node* get_right() {
-			return right.get();
-		}
 	};
 
-	std::unique_ptr <Node> roof;
+	std::unique_ptr <Node> root;
 	size_t size;
 public:
 	BitTree() {
-		roof = nullptr;
+		root = nullptr;
 		size = 0;
 	};
 	
@@ -52,7 +35,7 @@ public:
 
 	BitTree(BitTree &&obj) {
 		size = obj.size;
-		roof = std::move(obj.roof);
+		root = std::move(obj.root);
 	};
 
 	/*BitTree& operator= (BitTree &obj) {
@@ -67,7 +50,7 @@ public:
 			return *this;
 		clear();
 		size = obj.size;
-		roof = std::move (obj.roof);
+		root = std::move (obj.root);
 		return *this;
 	}
 	
@@ -79,26 +62,72 @@ public:
 		return this->size != 0;
 	};
 
-	/*void insert(K key, V value)
+	void insert(K key, V value)
 	{
-
-	};*/
-
-	bool get(K key, V& out) {
-		Node *tmp = this->roof.get();
-		while (tmp != nullptr) {
-			if (tmp->get_key() == key) {
-				out = tmp->get_value();
-				return true;
-			}
-			else if (tmp->get_key() > key) {
-				tmp = tmp->get_right();
+		if (size == 0) {
+			root = std::unique_ptr<Node> (new Node(value, key, nullptr, nullptr));
+			++size;
+			return;
+		}
+		Node *tmp = this->root.get();
+		while (1) {
+			if (key > tmp->key) {
+				if (tmp->left.get() == nullptr) {
+					tmp->left = std::unique_ptr<Node>(new Node(value, key, nullptr, nullptr));
+					++size;
+					return;
+				}
+				tmp = tmp->left.get();
 			}
 			else {
-				tmp = tmp->get_left();
+				if (tmp->right.get() == nullptr) {
+					tmp->right = std::unique_ptr<Node>(new Node(value, key, nullptr, nullptr));
+					++size;
+					return;
+				}
+				tmp = tmp->right.get();
+			}
+		}
+	};
+
+	bool get(K key, V& out) {
+		Node *tmp = this->root.get();
+		while (tmp != nullptr) {
+			if (tmp->key == key) {
+				out = tmp->value;
+				return true;
+			}
+			else if (tmp->key > key) {
+				tmp = tmp->right.get();
+			}
+			else {
+				tmp = tmp->left.get();
 			}
 		}
 		return false;
+	};
+
+	bool detach (K key, V& out)
+	{
+		Node *tmp = this->root.get();
+		while (tmp != nullptr) {
+			if (tmp->key > key) {
+				if (tmp->right.get()->key == key) {
+					// дописать перераспределеие дерева
+					out = tmp->value;
+					return true;
+				}
+				tmp = tmp->right.get();
+			}
+			else {
+				if (tmp->left.get()->key == key) {
+					// дописать перераспределение дерева
+					out = tmp->value;
+					return true;
+				}
+				tmp = tmp->left.get();
+			}
+		}
 	};
 };
 
