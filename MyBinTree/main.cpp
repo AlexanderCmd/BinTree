@@ -12,9 +12,17 @@ main() {
 	test.insert(4, 'f');
 	test.insert(3, 'g');
 	test.insert(10, 'h');	
- 	
+	test.insert(0, 'j');
+	BitTree<char, int> test_2;
+	test_2 = test;
 	char a;
-	if (test.get(3, a)) {
+	if (test.detach(1, a)) {
+		std::cout << a << std::endl;
+	}
+	else {
+		std::cout << "-" << std::endl;
+	}
+	if (test_2.get(1, a)) {
 		std::cout << a << std::endl;
 	}
 	else {

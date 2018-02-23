@@ -29,24 +29,26 @@ public:
 		size = 0;
 	};
 	
-	/*BitTree(BitTree &obj) { 
-		
-	};*/
+	BitTree(BitTree &obj) { 
+		Node *tmp = obj.root.get();
+		copytree (tmp);
+	};
 
 	BitTree(BitTree &&obj) {
 		size = obj.size;
 		root = std::move(obj.root);
 	};
 
-	/*BitTree& operator= (BitTree &obj) {
-		if (this == obj)
+	BitTree& operator= (BitTree &obj) {
+		if (this == &obj)
 			return *this;
-		
+		Node *tmp = obj.root.get();
+		copytree(tmp);
 		return *this;
-	};*/
+	};
 
 	BitTree& operator= (BitTree &&obj) {
-		if (this == obj)
+		if (this == &obj)
 			return *this;
 		clear();
 		size = obj.size;
@@ -109,24 +111,91 @@ public:
 
 	bool detach (K key, V& out)
 	{
+		if (root.get()->key == key) {
+			out = root.get()->value;
+			if (root.get()->right.get() != nullptr && root.get()->left.get() != nullptr) {
+				Node *tmp = root.get()->left.get();
+				while (tmp->right.get() != nullptr) {
+					tmp = tmp->right.get();
+				}
+				tmp->right = std::move(root->right);
+				root = std::move(root->left);
+			}
+			else if (root.get()->right.get() != nullptr) {
+				root = std::move(root->right);
+			}
+			else if (root.get()->left.get() != nullptr) {
+				root = std::move(root->left);
+			}
+			else {
+				root = nullptr;
+			}
+			--size;
+			return true;
+		}
 		Node *tmp = this->root.get();
 		while (tmp != nullptr) {
 			if (tmp->key > key) {
 				if (tmp->right.get()->key == key) {
-					// дописать перераспределеие дерева
-					out = tmp->value;
+					out = tmp->right.get()->value;
+					if (tmp->right.get()->right.get() != nullptr && tmp->right.get()->left.get() != nullptr) {
+						Node* tmp_2 = tmp->right.get()->left.get();
+						while (tmp_2->right.get() != nullptr) {
+							tmp_2 = tmp_2->right.get();
+						}
+						tmp_2->right = std::move(tmp->right.get()->right);
+						tmp->right = std::move(tmp->right.get()->left);
+					}
+					else if (tmp->right.get()->right.get() != nullptr) {
+						tmp->right = std::move(tmp->right.get()->right);
+					}
+					else if (tmp->right.get()->left.get() != nullptr) {
+						tmp->right = std::move(tmp->right.get()->left);
+					}
+					else {
+						tmp->right = nullptr;
+					}
+					--size;
 					return true;
 				}
 				tmp = tmp->right.get();
 			}
 			else {
 				if (tmp->left.get()->key == key) {
-					// дописать перераспределение дерева
-					out = tmp->value;
+					out = tmp->left.get()->value;
+					if (tmp->left.get()->right.get() != nullptr && tmp->left.get()->left.get() != nullptr) {
+						Node* tmp_2 = tmp->left.get()->left.get();
+						while (tmp_2->right.get() != nullptr) {
+							tmp_2 = tmp_2->right.get();
+						}
+						tmp_2->right = std::move(tmp->left.get()->right);
+						tmp->left = std::move(tmp->left.get()->left);
+					}
+					else if (tmp->left.get()->right.get() != nullptr) {
+						tmp->left = std::move(tmp->left.get()->right);
+					}
+					else if (tmp->left.get()->left.get() != nullptr) {
+						tmp->left = std::move(tmp->left.get()->left);
+					}
+					else {
+						tmp->left = nullptr;
+					}
+					--size;
 					return true;
 				}
 				tmp = tmp->left.get();
 			}
+		}
+		return false;
+	};
+
+	void copytree (Node* tmp) {
+		insert(tmp->key, tmp->value);
+		if (tmp->right != nullptr) {
+			copytree(tmp->right.get());
+		}
+		if (tmp->left != nullptr) {
+			copytree(tmp->left.get());
 		}
 	};
 };
