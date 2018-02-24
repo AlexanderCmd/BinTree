@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <memory>  
+#include <exception>
 
 template <typename V, typename K>
 class BitTree {
@@ -29,6 +30,11 @@ public:
 		size = 0;
 	};
 	
+	BitTree (std::initializer_list<std::pair <K, V>>tree) {
+		for (const auto &i : tree)
+			this->insert(i.first, i.second);
+	};
+
 	BitTree(BitTree &obj) { 
 		Node *tmp = obj.root.get();
 		copytree (tmp);
@@ -38,10 +44,15 @@ public:
 		size = obj.size;
 		root = std::move(obj.root);
 	};
-
+	void clear()
+	{
+		root = nullptr;
+		size = 0;
+	};
 	BitTree& operator= (BitTree &obj) {
 		if (this == &obj)
 			return *this;
+		clear();
 		Node *tmp = obj.root.get();
 		copytree(tmp);
 		return *this;
@@ -197,6 +208,21 @@ public:
 		if (tmp->left != nullptr) {
 			copytree(tmp->left.get());
 		}
+	};
+
+	V& operator[](K& key) {
+		V tmp;
+		if (get(key, tmp))
+			return tmp;
+		insert (key, NULL);
+		return NU ;
+	};
+
+	const V& operator[](K& val) const {
+		V tmp;
+		if (get(key, tmp))
+			return tmp;
+		throw Exception("Нет элемента с данным ключом");
 	};
 };
 

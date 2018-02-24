@@ -14,6 +14,8 @@ main() {
 	test.insert(10, 'h');	
 	test.insert(0, 'j');
 	BitTree<char, int> test_2;
+	std::pair<int, int> test(1, 2);
+	BitTree<int, int> pr {test, test};
 	test_2 = test;
 	char a;
 	if (test.detach(1, a)) {
