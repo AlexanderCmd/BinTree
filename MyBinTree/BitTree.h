@@ -4,6 +4,12 @@
 #include <iostream>
 #include <memory>  
 #include <exception>
+#include <algorithm>
+
+enum Descendant {
+	right,
+	left
+};
 
 template <typename V, typename K>
 class BitTree {
@@ -44,11 +50,13 @@ public:
 		size = obj.size;
 		root = std::move(obj.root);
 	};
+
 	void clear()
 	{
 		root = nullptr;
 		size = 0;
 	};
+
 	BitTree& operator= (BitTree &obj) {
 		if (this == &obj)
 			return *this;
@@ -75,16 +83,17 @@ public:
 		return this->size != 0;
 	};
 
-	void insert(K key, V value)
+	void insert(K &key, V &value)
 	{
 		if (size == 0) {
 			root = std::unique_ptr<Node> (new Node(value, key, nullptr, nullptr));
 			++size;
 			return;
 		}
+		std::less<K> comp;
 		Node *tmp = this->root.get();
 		while (1) {
-			if (key > tmp->key) {
+			if (comp(tmp->key, key)) {
 				if (tmp->left.get() == nullptr) {
 					tmp->left = std::unique_ptr<Node>(new Node(value, key, nullptr, nullptr));
 					++size;
@@ -103,14 +112,15 @@ public:
 		}
 	};
 
-	bool get(K key, V& out) {
+	bool get(K &key, V& out) {
+		std::less<K> comp;
 		Node *tmp = this->root.get();
 		while (tmp != nullptr) {
-			if (tmp->key == key) {
+			if (!comp(key, tmp->key) && !comp(tmp->key, key)) { // keys are equal
 				out = tmp->value;
 				return true;
 			}
-			else if (tmp->key > key) {
+			else if (comp (key, tmp->key)) {
 				tmp = tmp->right.get();
 			}
 			else {
@@ -120,84 +130,85 @@ public:
 		return false;
 	};
 
-	bool detach (K key, V& out)
+	bool detach (K &key, V& out)
 	{
-		if (root.get()->key == key) {
-			out = root.get()->value;
-			if (root.get()->right.get() != nullptr && root.get()->left.get() != nullptr) {
-				Node *tmp = root.get()->left.get();
-				while (tmp->right.get() != nullptr) {
-					tmp = tmp->right.get();
-				}
-				tmp->right = std::move(root->right);
-				root = std::move(root->left);
-			}
-			else if (root.get()->right.get() != nullptr) {
-				root = std::move(root->right);
-			}
-			else if (root.get()->left.get() != nullptr) {
-				root = std::move(root->left);
-			}
-			else {
-				root = nullptr;
-			}
-			--size;
+		if (get(key, out)) {
+			erase(key);
 			return true;
 		}
-		Node *tmp = this->root.get();
-		while (tmp != nullptr) {
-			if (tmp->key > key) {
-				if (tmp->right.get()->key == key) {
-					out = tmp->right.get()->value;
-					if (tmp->right.get()->right.get() != nullptr && tmp->right.get()->left.get() != nullptr) {
-						Node* tmp_2 = tmp->right.get()->left.get();
-						while (tmp_2->right.get() != nullptr) {
-							tmp_2 = tmp_2->right.get();
-						}
-						tmp_2->right = std::move(tmp->right.get()->right);
-						tmp->right = std::move(tmp->right.get()->left);
+		return false;
+	};
+
+	void erase(K &key) {
+		std::less<K> comp;
+		Descendant descendant_tmp_2 = left;
+		Node *tmp_1 = root.get();
+		Node *tmp_2 = root.get();
+		while (tmp_1 != nullptr) {
+			if (!comp(tmp_1->key, key) && !comp(key, tmp_1->key)) { 
+				if (tmp_1->right.get() == nullptr) { // right child is missing
+					if (tmp_1->left.get() != nullptr) { // there is a left descendant
+						if (!comp(root.get()->key, key) && !comp(key, root.get()->key)) // delete root
+							root = std::move(root->left);
+						else if (descendant_tmp_2 == left)  
+							tmp_2->left = std::move(tmp_1->left);
+						else // descendant_tmp_2 == right
+							tmp_2->right = std::move(tmp_1->left);
+						--size;
+						return;
 					}
-					else if (tmp->right.get()->right.get() != nullptr) {
-						tmp->right = std::move(tmp->right.get()->right);
+					// left child is missing
+					if (!comp(root.get()->key, key) && !comp(key, root.get()->key)) // delete root
+						root = nullptr;
+					else if (descendant_tmp_2 == left) 
+						tmp_2->left = nullptr;
+					else // descendant_tmp_2 == right
+						tmp_2->right = nullptr; 
+					--size;
+					return;
+				}
+				else if (tmp_1->left.get() == nullptr) {
+					if (!comp(root.get()->key, key) && !comp(key, root.get()->key)) // delete root
+						root = std::move (root.get()->right);
+					else if (descendant_tmp_2 == left)
+						tmp_2->left = std::move(tmp_1->right);
+					else // descendant_tmp_2 == right
+						tmp_2->right = std::move(tmp_1->right);
+					--size;
+					return;
+				}
+				else { // tmp_1->left.get() != nullptr 
+					tmp_1 = tmp_1->left.get();
+					while (tmp_1->right.get() != nullptr) {
+						tmp_1 = tmp_1->right.get();
 					}
-					else if (tmp->right.get()->left.get() != nullptr) {
-						tmp->right = std::move(tmp->right.get()->left);
+					if (!comp(root.get()->key, key) && !comp(key, root.get()->key)) {
+						tmp_1->right = std::move(root.get()->right);
+						root = std::move(root.get()->left);
 					}
-					else {
-						tmp->right = nullptr;
+					else if (descendant_tmp_2 == right) {
+						tmp_1->right = std::move(tmp_2->right.get()->right);
+						tmp_2->right = std::move(tmp_2->right.get()->left);
+					}
+					else { // descendant_tmp_2 == left
+						tmp_1->right = std::move(tmp_2->left.get()->right);
+						tmp_2->left = std::move(tmp_2->left.get()->left);
 					}
 					--size;
-					return true;
+					return;
 				}
-				tmp = tmp->right.get();
+			}
+			else if (comp(tmp_1->key, key)) {
+				tmp_2 = tmp_1;
+				tmp_1 = tmp_1->left.get();
+				descendant_tmp_2 = left;
 			}
 			else {
-				if (tmp->left.get()->key == key) {
-					out = tmp->left.get()->value;
-					if (tmp->left.get()->right.get() != nullptr && tmp->left.get()->left.get() != nullptr) {
-						Node* tmp_2 = tmp->left.get()->left.get();
-						while (tmp_2->right.get() != nullptr) {
-							tmp_2 = tmp_2->right.get();
-						}
-						tmp_2->right = std::move(tmp->left.get()->right);
-						tmp->left = std::move(tmp->left.get()->left);
-					}
-					else if (tmp->left.get()->right.get() != nullptr) {
-						tmp->left = std::move(tmp->left.get()->right);
-					}
-					else if (tmp->left.get()->left.get() != nullptr) {
-						tmp->left = std::move(tmp->left.get()->left);
-					}
-					else {
-						tmp->left = nullptr;
-					}
-					--size;
-					return true;
-				}
-				tmp = tmp->left.get();
+				tmp_2 = tmp_1;
+				tmp_1 = tmp_1->right.get();
+				descendant_tmp_2 = right;
 			}
 		}
-		return false;
 	};
 
 	void copytree (Node* tmp) {
@@ -222,9 +233,8 @@ public:
 		V tmp;
 		if (get(key, tmp))
 			return tmp;
-		throw Exception("Нет элемента с данным ключом");
+		throw Exception("Element with this key is missing");
 	};
 };
 
 #endif 
-
